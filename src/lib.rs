@@ -38,5 +38,5 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         }
     }
 
-    (real_malloc)(bytes)
+    real_malloc(bytes)
 }
