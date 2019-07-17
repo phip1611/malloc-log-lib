@@ -1,0 +1,14 @@
+[package]
+name = "malloc-log-lib"
+version = "0.1.0"
+authors = ["Philipp Schuster <phip1611@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "malloc_log_lib"
+crate-type = ["dylib"]
+
+[dependencies]
+libc = "0.2"
