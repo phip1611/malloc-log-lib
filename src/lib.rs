@@ -4,7 +4,7 @@ use std::io::Write;
 
 const MSG: &str = "HELLO WORLD\n";
 
-type LibCMallocT = extern "C" fn(usize) -> *mut libc::c_void;
+type LibCMallocT = fn(usize) -> *mut libc::c_void;
 
 #[no_mangle] // then "malloc" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
 // TODO: Save the whole malloc Wrapper
