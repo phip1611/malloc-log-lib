@@ -3,17 +3,21 @@ extern crate libc;
 extern crate lazy_static;
 
 use std::sync::Mutex;
-use std::borrow::BorrowMut;
 
 // Own Modules
 mod c_malloc; // => imports c_free.rs and makes all its public members under the namespace "c_malloc::" available
 mod c_free;
 mod c_utils; // if this doesn't stand here, c_malloc and c_free can't import c_utils ..
 mod init;
+mod log;
+mod macros;
 
 
 lazy_static! {
-    static ref initializer: Mutex<init::Initializer> = Mutex::new(init::Initializer::new());
+    // #[allow(non_upper_case_globals)]
+    pub static ref INITIALIZER: Mutex<init::Initializer> = Mutex::new(init::Initializer::new());
+    // #[allow(non_upper_case_globals)]
+    pub static ref LOG_CONFIG: Mutex<Option<log::LogConfig>> = Mutex::new(None);
 }
 
 
@@ -34,12 +38,14 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         // I'm REALLY not sure if I use the lock the proper way.. at least I get it work with this
         // (because I need a global object for this from where every part of the code can access
         // configuration etc.)
-        let l_init: &mut init::Initializer = &mut initializer.lock().unwrap();
+        let l_init: &mut init::Initializer = &mut INITIALIZER.lock().unwrap();
         if !l_init.done {
             // In Rust we don't have (AFAIK) a life before main, therefore I can't do static initialization
             // in the constructor of a class with static lifetime --> we have to do it during runtime once;
             // this is only done in malloc because I assume that there can never be a free call before a malloc call
+            eprintln!("calling .init() NOW");
             l_init.init();
+            eprintln!(".init() CALLED");
         }
     });
 
@@ -107,24 +113,3 @@ mod endless_recur_protection {
     }
 }
 
-/// Wraps Code that has mallocs/frees inside, that should be delegated IMMEDIATELY to
-/// the original implementation. There are two edge-cases when we want to do this:
-/// 1) we have code inside malloc/free that needs malloc/free itself (prevent endless recursion)
-/// 2) we have initialization-code that needs mallocs/frees and we don't want to log these calls
-#[macro_export]
-macro_rules! malloc_no_conflict {
-    ($code: stmt) => {{
-        if !endless_recur_protection::get_return_immediately() {
-            endless_recur_protection::enable_return_immediately();
-            $code;
-            endless_recur_protection::disable_return_immediately();
-        }
-    }};
-    ($code: block) => {{
-        if !endless_recur_protection::get_return_immediately() {
-            endless_recur_protection::enable_return_immediately();
-            $code;
-            endless_recur_protection::disable_return_immediately();
-        }
-    }}
-}
