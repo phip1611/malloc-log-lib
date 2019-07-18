@@ -1,9 +1,5 @@
 extern crate libc;
 
-// STD
-//use std::io::Write;
-
-
 // Own Modules
 mod c_malloc; // => imports mod.rs and makes all its public members under the namespace "c_malloc::" available
 mod c_free;
@@ -31,23 +27,21 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         }
     }
 
-    unsafe { libc::write(1, MSG_1.as_ptr() as *const libc::c_void, MSG_1.len()) };
-    /*if !get_return_immediately() {
-        // let's do logging and other stuff that potentially
-        // needs malloc() itself
+    unsafe { libc::write(libc::STDIN_FILENO, MSG_1.as_ptr() as *const libc::c_void, MSG_1.len()) };
 
-        // This Variable prevent infinite loops because 'std::io::stdout().write_all'
-        // also uses malloc itself
+    /* Example how to use functions that need malloc/free inside this fucntion
+    malloc_no_conflict!(
+        println!("Moin")
+    );
 
-        enable_return_immediately();
-        match std::io::stdout().write_all(MSG_1.as_bytes()) {
-            _ => ()
-        };
-        disable_return_immediately();
-    }*/
+    malloc_no_conflict!({
+        println!("Moin");
+        println!("Moin2");
+    });*/
+
 
     // can't be None, because we checked this on the very first call of malloc at the beginning
-    unsafe { REAL_MALLOC.expect("libc-malloc is not there!")(bytes) }
+    unsafe { REAL_MALLOC.unwrap()(bytes) }
 }
 
 #[no_mangle] // then "free" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
@@ -65,13 +59,7 @@ pub extern fn free(ptr: *const libc::c_void) {
     }
 
     // Write-System-Call. Doesn't use malloc itself, just writes everything straight out
-    unsafe {
-        libc::write(
-            libc::STDOUT_FILENO,
-            MSG_2.as_ptr() as *const libc::c_void,
-            MSG_2.len()
-        )
-    };
+    unsafe { libc::write(libc::STDOUT_FILENO, MSG_2.as_ptr() as *const libc::c_void, MSG_2.len())};
     /*if !get_return_immediately() {
         enable_return_immediately();
         match std::io::stdout().write_all(MSG_2.as_bytes()) {
@@ -80,22 +68,44 @@ pub extern fn free(ptr: *const libc::c_void) {
         disable_return_immediately();
     }*/
 
-    unsafe { REAL_FREE.expect("libc-free is not there!")(ptr); };
+    unsafe { REAL_FREE.unwrap()(ptr); };
 }
 
 
 // as mentioned here https://stackoverflow.com/a/46866917/2891595
 // it's common to write getter and setter for thread-local/LocalKey-vars
-/*fn get_return_immediately() -> bool {
+pub fn get_return_immediately() -> bool {
     RETURN_IMMEDIATELY.with(|val| val.borrow().clone())
 }
-fn enable_return_immediately() {
+pub fn enable_return_immediately() {
     RETURN_IMMEDIATELY.with(|val| {
         *val.borrow_mut() = true;
     });
 }
-fn disable_return_immediately() {
+pub fn disable_return_immediately() {
     RETURN_IMMEDIATELY.with(|val| {
         *val.borrow_mut() = false;
     });
-}*/
+}
+
+/// Wraps Code that has mallocs/frees inside, that should be delegated IMMEDIATELY to
+/// the original implementation. There are two edge-cases when we want to do this:
+/// 1) we have code inside malloc/free that needs malloc/free itself (prevent endless recursion)
+/// 2) we have initialization-code that needs mallocs/frees and we don't want to log these calls
+#[macro_export]
+macro_rules! malloc_no_conflict {
+    ($code: stmt) => {{
+        if !crate::get_return_immediately() {
+            crate::enable_return_immediately();
+            $code;
+            crate::disable_return_immediately();
+        }
+    }};
+    ($code: block) => {{
+        if !crate::get_return_immediately() {
+            crate::enable_return_immediately();
+            $code;
+            crate::disable_return_immediately();
+        }
+    }}
+}
