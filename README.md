@@ -25,12 +25,25 @@ void * malloc(size_t size) {
 ## How to use
 `$ LD_PRELOAD=./target/debug/libmalloc_log_lib.so ./mallocfreetest`
 
+=> you will get a `malloc-log-lib.txt`-file in your pwd
+looks like this:
+```
+timestamp;kind;size;pid;pointer;
+1563492050566161;MALLOC;40;14661;0x2467290;
+1563492050567320;MALLOC;40;14661;0x24678b0;
+1563492050567612;MALLOC;2;14661;0x2467890;
+```
+
 ## A few personal notes
 This is my first ever Rust-Project. In my opinion (from what I've read and experienced) Rust
 is not well suited for situations when you depend on static initialisation/construction and 
 destruction of global objects. Of course I understand that Rust's main goal is to run from
 the beginning to the end of main() and no further. But for a "system programming language" I
 definitely feel less empowered than with C++. 
+
+A **real problem** is that I can't run code after main() is over in Rust. In C++ I used the 
+destructor of a global class instance to flush a buffer. I can't make this in Rust so 
+I have to write all records immediately and can't buffer them..
 
 I'm sure a lot of my Code could be written much 
 better from a more experienced perspective. Right now my code looks kinda messy because of the 
