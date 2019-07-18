@@ -1,7 +1,10 @@
 extern crate libc;
 
+// STD
 use std::io::Write;
 
+// Own Modules
+mod c_malloc; // => imports c_malloc.rs and makes all its public members under the namespace "c_malloc::" available
 
 std::thread_local! {
     // All Thread-local static Vars
@@ -11,18 +14,18 @@ std::thread_local! {
 
 const MSG: &str = "HELLO WORLD\n";
 
-type LibCMallocT = fn(usize) -> *mut libc::c_void;
-
 #[no_mangle] // then "malloc" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
 pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
-
-    // C-Style string for symbol-name
-    let c_string = "malloc\0".as_ptr() as *mut i8; // char array for libc
-    // Void-Pointer to address of symbol
-    let real_malloc_addr: *mut libc::c_void = unsafe {libc::dlsym(libc::RTLD_NEXT, c_string)};
-    // transmute: "Reinterprets the bits of a value of one type as another type"
-    // Transform void-pointer-type to callable C-Function
-    let real_malloc: LibCMallocT = unsafe { std::mem::transmute(real_malloc_addr) };
+    static mut REAL_MALLOC: Option<c_malloc::LibCMallocT> = None;
+    unsafe {
+        // this will be executed only on the very first call to malloc, never again
+        // therefore unsafe should be fine
+        // also this could(?) only be called when there's only one thread
+        // (because a malloc should) always happen before there are multiple
+        if let Option::None = REAL_MALLOC {
+            REAL_MALLOC.replace(c_malloc::get_real_malloc());
+        }
+    }
 
     if !get_return_immediately() {
         // let's do logging and other stuff that potentially
@@ -38,12 +41,13 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         disable_return_immediately();
     }
 
-    real_malloc(bytes)
+    // can't be None, because we checked this on the very first call of malloc at the beginning
+    unsafe { REAL_MALLOC.unwrap()(bytes) }
 }
 
 
 // as mentioned here https://stackoverflow.com/a/46866917/2891595
-// it's common to write getter and setter for thread-local LocalKey-vars
+// it's common to write getter and setter for thread-local/LocalKey-vars
 fn get_return_immediately() -> bool {
     RETURN_IMMEDIATELY.with(|val| val.borrow().clone())
 }
