@@ -24,3 +24,21 @@ void * malloc(size_t size) {
 
 ## How to use
 `$ LD_PRELOAD=./target/debug/libmalloc_log_lib.so ./mallocfreetest`
+
+## A few personal notes
+This is my first ever Rust-Project. In my opinion (from what I've read and experienced) Rust
+is not well suited for situations when you depend on static initialisation/construction and 
+destruction of global objects. Of course I understand that Rust's main goal is to run from
+the beginning to the end of main() and no further. But for a "system programming language" I
+definitely feel less empowered than with C++. 
+
+I'm sure a lot of my Code could be written much 
+better from a more experienced perspective. Right now my code looks kinda messy because of the 
+mashup of libc and Rust ..
+
+I like the ideas of Rust and I will defnitely deep-dive even more into it. I want to do a 
+"real" Rust-Project (Binary) that "starts at main" - then the real fun begins :)
+
+Feel free to comment or contribute
+
+Philipp
