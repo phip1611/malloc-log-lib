@@ -34,7 +34,8 @@ definitely feel less empowered than with C++.
 
 I'm sure a lot of my Code could be written much 
 better from a more experienced perspective. Right now my code looks kinda messy because of the 
-mashup of libc and Rust ..
+mashup of libc and Rust .. I tried to put my C++-Thinking into this. So don't condemn me
+too much for the code please! :D
 
 I like the ideas of Rust and I will defnitely deep-dive even more into it. I want to do a 
 "real" Rust-Project (Binary) that "starts at main" - then the real fun begins :)
