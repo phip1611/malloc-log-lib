@@ -23,6 +23,7 @@ void * malloc(size_t size) {
 (and also for free)
 
 ## How to use
+`$ make`
 `$ LD_PRELOAD=./target/debug/libmalloc_log_lib.so ./mallocfreetest`
 
 => you will get a `malloc-log-lib.txt`-file in your pwd
