@@ -1,9 +1,21 @@
 extern crate libc;
+#[macro_use]
+extern crate lazy_static;
+
+use std::sync::Mutex;
+use std::borrow::BorrowMut;
 
 // Own Modules
 mod c_malloc; // => imports mod.rs and makes all its public members under the namespace "c_malloc::" available
 mod c_free;
 mod c_utils; // if this doesn't stand here, c_malloc and c_free can't import c_utils ..
+mod init;
+
+
+lazy_static! {
+    static ref initializer: Mutex<init::Initializer> = Mutex::new(init::Initializer::new());
+}
+
 
 #[no_mangle] // then "malloc" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
 pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
@@ -17,6 +29,19 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
             REAL_MALLOC.replace(c_malloc::get_real_malloc());
         }
     }
+
+    malloc_no_conflict!({
+        // I'm REALLY not sure if I use the lock the proper way.. at least I get it work with this
+        // (because I need a global object for this from where every part of the code can access
+        // configuration etc.)
+        let l_init: &mut init::Initializer = &mut initializer.lock().unwrap();
+        if !l_init.done {
+            // In Rust we don't have (AFAIK) a life before main, therefore I can't do static initialization
+            // in the constructor of a class with static lifetime --> we have to do it during runtime once;
+            // this is only done in malloc because I assume that there can never be a free call before a malloc call
+            l_init.init();
+        }
+    });
 
     // Example how to use functions that need malloc/free inside this function
     /*malloc_no_conflict!(
