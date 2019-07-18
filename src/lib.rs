@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use std::borrow::BorrowMut;
 
 // Own Modules
-mod c_malloc; // => imports mod.rs and makes all its public members under the namespace "c_malloc::" available
+mod c_malloc; // => imports c_free.rs and makes all its public members under the namespace "c_malloc::" available
 mod c_free;
 mod c_utils; // if this doesn't stand here, c_malloc and c_free can't import c_utils ..
 mod init;
