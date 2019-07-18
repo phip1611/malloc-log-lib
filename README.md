@@ -19,3 +19,8 @@ void * malloc(size_t size) {
      return ptr;
 }
 ```
+
+(and also for free)
+
+## How to use
+`$ LD_PRELOAD=./target/debug/libmalloc_log_lib.so ./mallocfreetest`
