@@ -50,10 +50,17 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
             // In Rust we don't have (AFAIK) a life before main, therefore I can't do static initialization
             // in the constructor of a class with static lifetime --> we have to do it during runtime once;
             // this is only done in malloc because I assume that there can never be a free call before a malloc call
-            eprintln!("calling .init() NOW");
             l_init.init();
-            eprintln!(".init() CALLED");
         }
+    });
+
+    malloc_no_conflict!({
+        // interpret libc-Pointer as Rust Number
+        //let p_as_n: usize = unsafe { std::mem::transmute(res) };
+        let p_as_n: usize = res as usize;
+        let p_as_s: String = format!("0x{}", p_as_n);
+        let record = logging::Record::new_malloc(p_as_s, bytes as u64);
+        logging::RECORDS.lock().unwrap().push(record);
     });
 
     // Example how to use functions that need malloc/free inside this function
@@ -92,15 +99,13 @@ pub extern fn free(ptr: *const libc::c_void) {
         return;
     }
 
-    // Example how to use functions that need malloc/free inside this function
-    /*malloc_no_conflict!(
-        println!("Moin")
-    );
-
     malloc_no_conflict!({
-        println!("Moin");
-        println!("Moin2");
-    });*/
+        // interpret libc-Pointer as Rust Number
+        let p_as_n: usize = ptr as usize;
+        let p_as_s: String = format!("0x{}", p_as_n);
+        let record = logging::Record::new_free(p_as_s);
+        logging::RECORDS.lock().unwrap().push(record);
+    });
 
     unsafe { REAL_FREE.unwrap()(ptr); };
 }

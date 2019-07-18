@@ -1,6 +1,8 @@
 use crate::malloc_recur_protection;
 use crate::malloc_no_conflict;
 
+use crate::logging;
+
 pub struct Initializer {
     pub done: bool
 }
@@ -25,3 +27,10 @@ impl Initializer {
         );
     }
 }
+
+/*impl Drop for Initializer {
+    fn drop(&mut self) {
+        let x = logging::RECORDS.lock().unwrap();
+        println!("all records[{}]: {:#?}", x.len(), x);
+    }
+}*/
