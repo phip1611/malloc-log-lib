@@ -65,7 +65,13 @@ pub extern fn free(ptr: *const libc::c_void) {
     }
 
     // Write-System-Call. Doesn't use malloc itself, just writes everything straight out
-    unsafe { libc::write(1, MSG_2.as_ptr() as *const libc::c_void, MSG_2.len()) };
+    unsafe {
+        libc::write(
+            libc::STDOUT_FILENO,
+            MSG_2.as_ptr() as *const libc::c_void,
+            MSG_2.len()
+        )
+    };
     /*if !get_return_immediately() {
         enable_return_immediately();
         match std::io::stdout().write_all(MSG_2.as_bytes()) {
