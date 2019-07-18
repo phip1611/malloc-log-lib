@@ -5,12 +5,6 @@ mod c_malloc; // => imports mod.rs and makes all its public members under the na
 mod c_free;
 mod c_utils; // if this doesn't stand here, c_malloc and c_free can't import c_utils ..
 
-std::thread_local! {
-    // All Thread-local static Vars
-    // Disable logging aka return immediately the pointer from the real malloc (libc malloc)
-    static RETURN_IMMEDIATELY: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
-}
-
 #[no_mangle] // then "malloc" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
 pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
     static mut REAL_MALLOC: Option<c_malloc::LibCMallocT> = None;
@@ -24,8 +18,8 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         }
     }
 
-    /* Example how to use functions that need malloc/free inside this fucntion
-    malloc_no_conflict!(
+    // Example how to use functions that need malloc/free inside this function
+    /*malloc_no_conflict!(
         println!("Moin")
     );
 
@@ -64,21 +58,28 @@ pub extern fn free(ptr: *const libc::c_void) {
     unsafe { REAL_FREE.unwrap()(ptr); };
 }
 
+mod endless_recur_protection {
+    std::thread_local! {
+        // All Thread-local static Vars
+        // Disable logging aka return immediately the pointer from the real malloc (libc malloc)
+        static RETURN_IMMEDIATELY: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
+    }
 
-// as mentioned here https://stackoverflow.com/a/46866917/2891595
-// it's common to write getter and setter for thread-local/LocalKey-vars
-pub fn get_return_immediately() -> bool {
-    RETURN_IMMEDIATELY.with(|val| val.borrow().clone())
-}
-pub fn enable_return_immediately() {
-    RETURN_IMMEDIATELY.with(|val| {
-        *val.borrow_mut() = true;
-    });
-}
-pub fn disable_return_immediately() {
-    RETURN_IMMEDIATELY.with(|val| {
-        *val.borrow_mut() = false;
-    });
+    // as mentioned here https://stackoverflow.com/a/46866917/2891595
+    // it's common to write getter and setter for thread-local/LocalKey-vars
+    pub fn get_return_immediately() -> bool {
+        RETURN_IMMEDIATELY.with(|val| val.borrow().clone())
+    }
+    pub fn enable_return_immediately() {
+        RETURN_IMMEDIATELY.with(|val| {
+            *val.borrow_mut() = true;
+        });
+    }
+    pub fn disable_return_immediately() {
+        RETURN_IMMEDIATELY.with(|val| {
+            *val.borrow_mut() = false;
+        });
+    }
 }
 
 /// Wraps Code that has mallocs/frees inside, that should be delegated IMMEDIATELY to
@@ -88,17 +89,17 @@ pub fn disable_return_immediately() {
 #[macro_export]
 macro_rules! malloc_no_conflict {
     ($code: stmt) => {{
-        if !crate::get_return_immediately() {
-            crate::enable_return_immediately();
+        if !endless_recur_protection::get_return_immediately() {
+            endless_recur_protection::enable_return_immediately();
             $code;
-            crate::disable_return_immediately();
+            endless_recur_protection::disable_return_immediately();
         }
     }};
     ($code: block) => {{
-        if !crate::get_return_immediately() {
-            crate::enable_return_immediately();
+        if !endless_recur_protection::get_return_immediately() {
+            endless_recur_protection::enable_return_immediately();
             $code;
-            crate::disable_return_immediately();
+            endless_recur_protection::disable_return_immediately();
         }
     }}
 }
