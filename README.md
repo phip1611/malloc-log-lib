@@ -8,7 +8,7 @@ Travis CI: [![Build Status](https://travis-ci.com/phip1611/malloc-log-lib.svg?br
 
 ## Basic Idea
 Basically it's about to port the following code to Rust:
-````c++
+```c++
 void * malloc(size_t size) {
      static void *(*real_malloc)(size_t) = nullptr;
      if (real_malloc == nullptr) {
