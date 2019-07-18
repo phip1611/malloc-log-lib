@@ -13,6 +13,16 @@ int main(void) {
   free(ptr);
   sprintf(msg2, "Freed Ptr: %p\n", ptr);
   write(1, msg2, strlen(msg2));
+
+  // some more tests
+  void * ptrs[3];
+  ptrs[0] = malloc(1);
+  ptrs[1] = malloc(2);
+  ptrs[2] = malloc(3);
+  free(ptrs[0]);
+  free(ptrs[1]);
+  free(ptrs[2]);
+  
   return 0;
 }
 
