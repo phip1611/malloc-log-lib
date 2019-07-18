@@ -14,29 +14,27 @@ pub struct LogConfig {
 
 impl LogConfig {
     pub fn new() -> LogConfig {
-        malloc_no_conflict!({
-            eprintln!("foobar");
-        });
+        //malloc_no_conflict!({
+            //eprintln!("foobar");
+        //});
 
-        /* for some reason either the ok nor the err branch are executed
-        // i don't get it.. todo investigate
         let mut file: Option<File> = None;
-        match File::open("malloc-log-lib.txt") {
+        /*match File::open("malloc-log-lib.txt") {
             Ok(f) => {
-                malloc_no_conflict!(
+                //malloc_no_conflict!(
                     println!(
                         "file: {:#?}", f
-                    )
-                );
+                    );
+                //);
                 file = Some(f)
             },
-            _ => {
+            Err(e) => {
                 #[allow(unreachable_code)] // because panic breaks the program
                 {
-                    malloc_no_conflict!({
-                        eprintln!("Can't open out-file 'malloc-log-lib.txt'! Exiting program.");
+                    //malloc_no_conflict!({
+                        eprintln!("Can't open out-file 'malloc-log-lib.txt'! Exiting program. Error={:#?}", e);
                         panic!("hello");
-                    });
+                    //});
                 }
             }
         };*/

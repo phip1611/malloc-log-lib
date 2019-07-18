@@ -9,7 +9,7 @@ mod c_malloc; // => imports c_free.rs and makes all its public members under the
 mod c_free;
 mod c_utils; // if this doesn't stand here, c_malloc and c_free can't import c_utils ..
 mod init;
-mod log;
+mod logging;
 mod macros;
 
 
@@ -17,7 +17,7 @@ lazy_static! {
     // #[allow(non_upper_case_globals)]
     pub static ref INITIALIZER: Mutex<init::Initializer> = Mutex::new(init::Initializer::new());
     // #[allow(non_upper_case_globals)]
-    pub static ref LOG_CONFIG: Mutex<Option<log::LogConfig>> = Mutex::new(None);
+    pub static ref LOG_CONFIG: Mutex<Option<logging::LogConfig>> = Mutex::new(None);
 }
 
 
