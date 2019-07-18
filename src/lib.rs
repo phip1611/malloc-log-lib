@@ -34,6 +34,13 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         }
     }
 
+    // can't be None, because we checked this on the very first call of malloc at the beginning
+    let res = unsafe { REAL_MALLOC.unwrap()(bytes) };
+
+    if malloc_recur_protection::get_return_immediately() {
+        return res;
+    }
+
     malloc_no_conflict!({
         // I'm REALLY not sure if I use the lock the proper way.. at least I get it work with this
         // (because I need a global object for this from where every part of the code can access
@@ -60,8 +67,7 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
     });*/
 
 
-    // can't be None, because we checked this on the very first call of malloc at the beginning
-    unsafe { REAL_MALLOC.unwrap()(bytes) }
+    res
 }
 
 #[no_mangle] // then "free" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
@@ -78,22 +84,34 @@ pub extern fn free(ptr: *const libc::c_void) {
         }
     }
 
-    /*if !get_return_immediately() {
-        enable_return_immediately();
-        match std::io::stdout().write_all(MSG_2.as_bytes()) {
-            _ => ()
-        };
-        disable_return_immediately();
-    }*/
+    // fast return as early as possible if wanted
+    // I didn't managed it to cover this in the 'malloc_no_conflict!'-Macro
+    // (segfaults with nested macros); this solution is easier
+    if malloc_recur_protection::get_return_immediately() {
+        unsafe { REAL_FREE.unwrap()(ptr); };
+        return;
+    }
+
+    // Example how to use functions that need malloc/free inside this function
+    /*malloc_no_conflict!(
+        println!("Moin")
+    );
+
+    malloc_no_conflict!({
+        println!("Moin");
+        println!("Moin2");
+    });*/
 
     unsafe { REAL_FREE.unwrap()(ptr); };
 }
 
-mod endless_recur_protection {
+mod malloc_recur_protection {
     std::thread_local! {
         // All Thread-local static Vars
         // Disable logging aka return immediately the pointer from the real malloc (libc malloc)
         static RETURN_IMMEDIATELY: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
+        // tells us if we are in a chain of multiple
+        static IS_IN_MACRO_CHAIN: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
     }
 
     // as mentioned here https://stackoverflow.com/a/46866917/2891595
@@ -108,6 +126,20 @@ mod endless_recur_protection {
     }
     pub fn disable_return_immediately() {
         RETURN_IMMEDIATELY.with(|val| {
+            *val.borrow_mut() = false;
+        });
+    }
+
+    pub fn get_is_in_macro_chain() -> bool {
+        IS_IN_MACRO_CHAIN.with(|val| val.borrow().clone())
+    }
+    pub fn truify_is_in_macro_chain() {
+        IS_IN_MACRO_CHAIN.with(|val| {
+            *val.borrow_mut() = true;
+        });
+    }
+    pub fn falsify_is_in_macro_chain() {
+        IS_IN_MACRO_CHAIN.with(|val| {
             *val.borrow_mut() = false;
         });
     }
