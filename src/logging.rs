@@ -3,13 +3,8 @@ use std::fs::File;
 // Make the macro available in this file!
 use crate::malloc_recur_protection;
 use crate::malloc_no_conflict;
+use std::io::Write;
 // ###################
-
-// this file is all about logging to the file, creating records, holding the buffer, ...
-lazy_static!(
-    pub static ref RECORDS: std::sync::Mutex<Vec<Record>> = std::sync::Mutex::new(Vec::new());
-);
-
 
 #[derive(Debug)]
 //#[repr(packed)] // packed because we don't need much reading on it but a lot of items of it
@@ -87,4 +82,42 @@ impl LogConfig {
             log_file: file
         }
     }
+}
+
+pub fn write_head() {
+    let head: String = String::from("timestamp;kind;size;pid;pointer;\n");
+    /*let mut cfg_guard: std::sync::MutexGuard<Option<LogConfig>> = crate::LOG_CONFIG.lock().unwrap();
+    let cfg: &mut LogConfig = cfg_guard.as_mut().unwrap();
+    let mut log_file = cfg.borrow_mut().log_file;
+    log_file.write_all(head.as_bytes());*/
+
+    // didn't make it work it to use the global stored file :/
+    let mut file = File::create("malloc-log-lib.txt").unwrap();
+    file.write_all(head.as_bytes());
+}
+
+pub fn write_record(record: Record) {
+    let mut row: String = String::from("");
+
+    row.push_str(format!("{}", record.timestamp).as_str());
+    row.push(';');
+
+    row.push_str(format!("{:?}", record.kind).as_str());
+    row.push(';');
+
+    row.push_str(format!("{}", record.size).as_str());
+    row.push(';');
+
+    row.push_str(format!("{}", record.pid).as_str());
+    row.push(';');
+
+    row.push_str(record.pointer.as_str());
+    row.push(';');
+    row.push('\n');
+
+    // didn't make it work it to use the global stored file :/
+    let mut file = std::fs::OpenOptions::new().append(true)
+        .open("malloc-log-lib.txt").unwrap();
+
+    file.write_all(row.as_bytes());
 }

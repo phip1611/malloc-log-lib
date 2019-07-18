@@ -12,14 +12,12 @@ mod init;
 mod logging;
 mod macros;
 
-
 lazy_static! {
     // #[allow(non_upper_case_globals)]
     pub static ref INITIALIZER: Mutex<init::Initializer> = Mutex::new(init::Initializer::new());
     // #[allow(non_upper_case_globals)]
     pub static ref LOG_CONFIG: Mutex<Option<logging::LogConfig>> = Mutex::new(None);
 }
-
 
 #[no_mangle] // then "malloc" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
 pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
@@ -60,7 +58,7 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         let p_as_n: usize = res as usize;
         let p_as_s: String = format!("0x{:x}", p_as_n);
         let record = logging::Record::new_malloc(p_as_s, bytes as u64);
-        logging::RECORDS.lock().unwrap().push(record);
+        logging::write_record(record);
     });
 
     // Example how to use functions that need malloc/free inside this function
@@ -103,8 +101,8 @@ pub extern fn free(ptr: *const libc::c_void) {
         // interpret libc-Pointer as Rust Number
         let p_as_n: usize = ptr as usize;
         let p_as_s: String = format!("0x{:x}", p_as_n);
-        let record = logging::Record::new_free(p_as_s);
-        logging::RECORDS.lock().unwrap().push(record);
+        let record = logging::Record::new_free(p_as_s);;
+        logging::write_record(record);
     });
 
     unsafe { REAL_FREE.unwrap()(ptr); };
