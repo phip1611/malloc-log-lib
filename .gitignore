@@ -4,3 +4,4 @@ Cargo.lock
 /mallocfreetest
 .vscode/
 .idea/
+/malloc-log-lib.txt
