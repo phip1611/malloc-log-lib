@@ -58,7 +58,7 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         // interpret libc-Pointer as Rust Number
         //let p_as_n: usize = unsafe { std::mem::transmute(res) };
         let p_as_n: usize = res as usize;
-        let p_as_s: String = format!("0x{}", p_as_n);
+        let p_as_s: String = format!("0x{:x}", p_as_n);
         let record = logging::Record::new_malloc(p_as_s, bytes as u64);
         logging::RECORDS.lock().unwrap().push(record);
     });
@@ -102,7 +102,7 @@ pub extern fn free(ptr: *const libc::c_void) {
     malloc_no_conflict!({
         // interpret libc-Pointer as Rust Number
         let p_as_n: usize = ptr as usize;
-        let p_as_s: String = format!("0x{}", p_as_n);
+        let p_as_s: String = format!("0x{:x}", p_as_n);
         let record = logging::Record::new_free(p_as_s);
         logging::RECORDS.lock().unwrap().push(record);
     });
