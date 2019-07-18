@@ -11,9 +11,6 @@ std::thread_local! {
     static RETURN_IMMEDIATELY: std::cell::RefCell<bool> = std::cell::RefCell::new(false);
 }
 
-const MSG_1: &str = "HELLO FROM MALLOC WRAPPER\n";
-const MSG_2: &str = "HELLO FROM FREE WRAPPER\n";
-
 #[no_mangle] // then "malloc" is the symbol name so that ELF-Files can find it (if this lib is preloaded)
 pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
     static mut REAL_MALLOC: Option<c_malloc::LibCMallocT> = None;
@@ -26,8 +23,6 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
             REAL_MALLOC.replace(c_malloc::get_real_malloc());
         }
     }
-
-    unsafe { libc::write(libc::STDIN_FILENO, MSG_1.as_ptr() as *const libc::c_void, MSG_1.len()) };
 
     /* Example how to use functions that need malloc/free inside this fucntion
     malloc_no_conflict!(
@@ -58,8 +53,6 @@ pub extern fn free(ptr: *const libc::c_void) {
         }
     }
 
-    // Write-System-Call. Doesn't use malloc itself, just writes everything straight out
-    unsafe { libc::write(libc::STDOUT_FILENO, MSG_2.as_ptr() as *const libc::c_void, MSG_2.len())};
     /*if !get_return_immediately() {
         enable_return_immediately();
         match std::io::stdout().write_all(MSG_2.as_bytes()) {
