@@ -1,3 +1,3 @@
 all:
-	gcc -o test test.c
+	gcc -o mallocfreetest mallocfreetest.c
 
