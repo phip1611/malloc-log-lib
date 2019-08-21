@@ -3,6 +3,7 @@ extern crate libc;
 extern crate lazy_static;
 
 use std::sync::Mutex;
+use crate::c_utils::CVoidPtr;
 
 // Own Modules
 mod c_malloc; // => imports c_free.rs and makes all its public members under the namespace "c_malloc::" available
@@ -12,9 +13,10 @@ mod init;
 mod logging;
 mod macros;
 
+
+pub static mut INITIALIZER: init::Initializer = init::Initializer::new();
+
 lazy_static! {
-    // #[allow(non_upper_case_globals)]
-    pub static ref INITIALIZER: Mutex<init::Initializer> = Mutex::new(init::Initializer::new());
     // #[allow(non_upper_case_globals)]
     pub static ref LOG_CONFIG: Mutex<Option<logging::LogConfig>> = Mutex::new(None);
 }
@@ -25,15 +27,15 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
     unsafe {
         // this will be executed only on the very first call to malloc, never again
         // therefore unsafe should be fine
-        // also this could(?) only be called when there's only one thread
-        // (because a malloc should) always happen before there are multiple
+        // also this can(?) only be called when there's only one thread
+        // (because a malloc should) always happen before there are multiple threads
         if let Option::None = REAL_MALLOC {
             REAL_MALLOC.replace(c_malloc::get_real_malloc());
         }
     }
 
     // can't be None, because we checked this on the very first call of malloc at the beginning
-    let res = unsafe { REAL_MALLOC.unwrap()(bytes) };
+    let res: CVoidPtr = unsafe { REAL_MALLOC.unwrap()(bytes) };
 
     if malloc_recur_protection::get_return_immediately() {
         return res;
@@ -43,12 +45,13 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         // I'm REALLY not sure if I use the lock the proper way.. at least I get it work with this
         // (because I need a global object for this from where every part of the code can access
         // configuration etc.)
-        let l_init: &mut init::Initializer = &mut INITIALIZER.lock().unwrap();
-        if !l_init.done {
-            // In Rust we don't have (AFAIK) a life before main, therefore I can't do static initialization
-            // in the constructor of a class with static lifetime --> we have to do it during runtime once;
-            // this is only done in malloc because I assume that there can never be a free call before a malloc call
-            l_init.init();
+        unsafe {
+            if !INITIALIZER.is_runtime_init_done() {
+                // In Rust we don't have (AFAIK) a life before main, therefore I can't do static initialization
+                // in the constructor of a class with static lifetime --> we have to do it during runtime once;
+                // this is only done in malloc because I assume that there can never be a free call before a malloc call
+                INITIALIZER.init();
+            }
         }
     });
 
@@ -60,17 +63,6 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         let record = logging::Record::new_malloc(p_as_s, bytes as u64);
         logging::write_record(record);
     });
-
-    // Example how to use functions that need malloc/free inside this function
-    /*malloc_no_conflict!(
-        println!("Moin")
-    );
-
-    malloc_no_conflict!({
-        println!("Moin");
-        println!("Moin2");
-    });*/
-
 
     res
 }

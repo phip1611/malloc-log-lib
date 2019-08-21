@@ -93,7 +93,7 @@ pub fn write_head() {
 
     // didn't make it work it to use the global stored file :/
     let mut file = File::create("malloc-log-lib.txt").unwrap();
-    file.write_all(head.as_bytes());
+    let _ = file.write_all(head.as_bytes());
 }
 
 pub fn write_record(record: Record) {
@@ -119,5 +119,5 @@ pub fn write_record(record: Record) {
     let mut file = std::fs::OpenOptions::new().append(true)
         .open("malloc-log-lib.txt").unwrap();
 
-    file.write_all(row.as_bytes());
+    let _ = file.write_all(row.as_bytes());
 }
