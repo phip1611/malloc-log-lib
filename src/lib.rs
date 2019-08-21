@@ -12,9 +12,10 @@ mod init;
 mod logging;
 mod macros;
 
+
+pub static mut INITIALIZER: init::Initializer = init::Initializer::new();
+
 lazy_static! {
-    // #[allow(non_upper_case_globals)]
-    pub static ref INITIALIZER: Mutex<init::Initializer> = Mutex::new(init::Initializer::new());
     // #[allow(non_upper_case_globals)]
     pub static ref LOG_CONFIG: Mutex<Option<logging::LogConfig>> = Mutex::new(None);
 }
@@ -43,12 +44,13 @@ pub extern fn malloc(bytes: usize) -> *mut libc::c_void {
         // I'm REALLY not sure if I use the lock the proper way.. at least I get it work with this
         // (because I need a global object for this from where every part of the code can access
         // configuration etc.)
-        let l_init: &mut init::Initializer = &mut INITIALIZER.lock().unwrap();
-        if !l_init.done {
-            // In Rust we don't have (AFAIK) a life before main, therefore I can't do static initialization
-            // in the constructor of a class with static lifetime --> we have to do it during runtime once;
-            // this is only done in malloc because I assume that there can never be a free call before a malloc call
-            l_init.init();
+        unsafe {
+            if !INITIALIZER.done {
+                // In Rust we don't have (AFAIK) a life before main, therefore I can't do static initialization
+                // in the constructor of a class with static lifetime --> we have to do it during runtime once;
+                // this is only done in malloc because I assume that there can never be a free call before a malloc call
+                INITIALIZER.init();
+            }
         }
     });
 
